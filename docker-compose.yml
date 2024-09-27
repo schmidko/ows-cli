@@ -1,0 +1,36 @@
+version: '3.7'
+services:
+  # mongodb_container:
+  #   image: mongo:latest
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: root
+  #     MONGO_INITDB_ROOT_PASSWORD: knut
+  #   ports:
+  #     - 27055:27017
+  #   volumes:
+  #     - /home/mog/mongo_data:/data/db
+
+  postgres:
+    image: postgres:14-alpine
+    ports:
+      - 5432:5432
+    volumes:
+      - ~/home/mog/pg_data:/data/db
+    environment:
+      - POSTGRES_PASSWORD=knut
+      - POSTGRES_USER=root
+      - POSTGRES_DB=ows
+      
+  # node:
+  #   image: "node"
+  #   container_name: arbi
+  #   working_dir: /app
+  #   environment:
+  #     - NODE_ENV=production
+  #     - /home/mog/env/arbi/.env
+  #   volumes:
+  #     - /var/www/arbi:/app
+  #   ports:
+  #     - "4554:4554"
+#volumes:
+  #app:

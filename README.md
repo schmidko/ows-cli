@@ -1,1 +1,1 @@
-# ows-cmd
+# ows

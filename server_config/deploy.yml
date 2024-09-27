@@ -1,0 +1,63 @@
+
+---
+- hosts: arbi
+  remote_user: mog
+  vars_prompt:
+    - name: "ansible_become_pass"
+      prompt: "Sudo password"
+      private: yes
+  become: yes
+  become_flags: "-E"
+  gather_facts: yes
+
+  tasks:
+
+    - name: Delete directory
+      file:
+        state: absent
+        path: "/var/www/arbi"
+
+    - name: Create directory
+      file:
+        path: "/var/www/arbi"
+        state: directory
+
+    - name: Clone git repository
+      git:
+        repo: "git@github.com:schmidko/arbi.git"
+        version: "dex1"
+        dest: "/var/www/arbi/"
+        force: yes
+        accept_hostkey: yes
+    
+    - name: Copy env
+      copy:
+        src: "/home/mog/env/arbi/.env"
+        dest: "/var/www/arbi/.env"
+        remote_src: true
+
+    - name: Copy nami
+      copy:
+        src: "/home/mog/nami"
+        dest: "/var/www/arbi/libs/"
+        remote_src: true
+
+    - name: Install packages
+      npm:
+        path: "/var/www/arbi/"
+
+    - name: Replace keys
+      shell:
+        cmd: "node cli tb replace"
+        chdir: /var/www/arbi/
+
+    # - name: Stop container
+    #   shell:
+    #     cmd: "docker compose down"
+    #     chdir: /var/www/arbi/
+
+    # - name: Run container
+    #   shell:
+    #     cmd: "docker compose up --detach"
+    #     chdir: /var/www/arbi/
+
