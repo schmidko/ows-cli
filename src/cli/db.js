@@ -12,7 +12,7 @@ exports.connectDB = async function connectDB() {
 		client = await MongoClient.connect(url, {useUnifiedTopology: true});
 	}
 	return {
-		db: client.db('arbidex'),
+		db: client.db('ows'),
 		client,
 	};
 };

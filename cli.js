@@ -44,6 +44,28 @@ tradebot
         process.exit();
     });
 
+tradebot
+    .command('fetch-addresses')
+    .description('fetch addresses')
+    .action(async (release, options, command) => {
+        const {fetchStakeAddresses} = require("./src/cli/main.js");
+        const result = await fetchStakeAddresses();
+        console.log(result);
+        
+        process.exit();
+    });
+
+tradebot
+    .command('fetch-data')
+    .description('fetch data')
+    .action(async (release, options, command) => {
+        const {fetchData} = require("./src/cli/main.js");
+        const result = await fetchData();
+        console.log(result);
+        
+        process.exit();
+    });
+
 program
     .command('help')
     .description('Display helpful information')
