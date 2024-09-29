@@ -13,6 +13,8 @@ const config = {
     //ssl: true
 };
 
+const collectionName = "addresses";
+
 async function main() {
 
     const {Client} = pg
@@ -46,29 +48,43 @@ async function dbSize() {
     return res.rows[0];
 }
 
-async function fetchStakeAddresses() {
+async function fetchStakeAddresses(count) {
     const {Client} = pg
     const client = new Client(config)
-    await client.connect()
+    await client.connect();
 
-    const query = "SELECT view FROM stake_address LIMIT 1000;";
+    const query = "SELECT count(id) FROM stake_address;";
     const res = await client.query(query);
+    const rowCount = res.rows[0].count;
 
     const {db} = await connectDB();
-    const collection = db.collection("addresses");
+    const collection = db.collection(collectionName);
 
-    for (const row of res.rows) {
-        //console.log(row.view);
+    let offset = 4900000;
+    let resultPg = null;
+    do {
+        const query = `SELECT * FROM stake_address ORDER BY id LIMIT 100 OFFSET ${offset};`;
+        const res = await client.query(query);
+        resultPg = res.rows
 
-        const query = {stakeAddress: row.view};
-        const data = {
-            $set: {
-                stakeAddress: row.view
-            }
-        };
-        const result = await collection.updateOne(query, data, {upsert: true});
+        for (const row of resultPg) {
+            //console.log(row.view);
+            
+            const filter = {stakeAddress: row.view};
+            const data = {
+                $set: {
+                    stakeAddress: row.view
+                }
+            };
+            const result = await collection.updateOne(filter, data, {upsert: true});
 
-    }
+        }
+        offset += 100;
+        let percent = (100/rowCount) * offset;
+        percent = Math.round(percent * 1000) / 1000;
+        console.log(percent + '% stake addresses inserted!!');
+        
+    } while (resultPg.length > 0);
 
     await client.end()
     return 1;
@@ -80,11 +96,8 @@ async function fetchData() {
     const client = new Client(config)
     await client.connect()
 
-    //const query = "SELECT view FROM stake_address LIMIT 1000;";
-    //const res = await client.query(query);
-
     const {db} = await connectDB();
-    const collection = db.collection("addresses");
+    const collection = db.collection(collectionName);
     const queryFind = {"ada": {$exists: false}};
     const result = await collection.find(queryFind).toArray();
     const items = result.length;
@@ -107,7 +120,7 @@ async function fetchData() {
         if (res1.rows[0].sum) {
             ada = res1.rows[0].sum;
         }
-        
+
         const queryCoins = `SELECT encode(ma.policy::bytea, 'hex') as policy, ma.fingerprint, SUM(matxo.quantity) AS total_quantity
             FROM tx_out AS txo
             LEFT JOIN tx_in AS txi ON txo.tx_id = txi.tx_out_id AND txo.index::smallint = txi.tx_out_index::smallint 
@@ -145,13 +158,12 @@ async function fetchData() {
             }
         };
         console.log(data);
-        
+
         const result = await collection.updateOne(query, data, {upsert: true});
         console.log('progress: ' + items + '/' + count);
-        
+
     }
 
-   
 
     await client.end()
     return 1;
