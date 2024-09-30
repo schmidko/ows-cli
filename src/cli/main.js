@@ -48,7 +48,7 @@ async function dbSize() {
     return res.rows[0];
 }
 
-async function fetchStakeAddresses(count) {
+async function fetchStakeAddresses(offset) {
     const {Client} = pg
     const client = new Client(config)
     await client.connect();
@@ -60,7 +60,7 @@ async function fetchStakeAddresses(count) {
     const {db} = await connectDB();
     const collection = db.collection(collectionName);
 
-    let offset = 4900000;
+    //offset = 4900000;
     let resultPg = null;
     do {
         const query = `SELECT * FROM stake_address ORDER BY id LIMIT 100 OFFSET ${offset};`;

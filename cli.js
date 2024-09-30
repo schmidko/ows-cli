@@ -48,9 +48,17 @@ tradebot
     .command('fetch-addresses')
     .description('fetch addresses')
     .action(async (release, options, command) => {
+
+        console.log(options.args);
+
+        let offset = 0;
+        if (options.args[0]) {
+            offset = options.args[0];
+        }
+        
         const {fetchStakeAddresses} = require("./src/cli/main.js");
-        const result = await fetchStakeAddresses();
-        console.log(result);
+        const result = await fetchStakeAddresses(offset);
+        //console.log(result);
         
         process.exit();
     });
