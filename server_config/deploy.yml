@@ -1,6 +1,6 @@
 
 ---
-- hosts: arbi
+- hosts: ows-cli
   remote_user: mog
   vars_prompt:
     - name: "ansible_become_pass"
@@ -15,49 +15,27 @@
     - name: Delete directory
       file:
         state: absent
-        path: "/var/www/arbi"
+        path: "/var/www/ows-cli"
 
     - name: Create directory
       file:
-        path: "/var/www/arbi"
+        path: "/var/www/ows-cli"
         state: directory
 
     - name: Clone git repository
       git:
-        repo: "git@github.com:schmidko/arbi.git"
-        version: "dex1"
-        dest: "/var/www/arbi/"
+        repo: "git@github.com:schmidko/ows-cli.git"
+        version: "main"
+        dest: "/var/www/ows-cli/"
         force: yes
         accept_hostkey: yes
     
     - name: Copy env
       copy:
-        src: "/home/mog/env/arbi/.env"
-        dest: "/var/www/arbi/.env"
-        remote_src: true
-
-    - name: Copy nami
-      copy:
-        src: "/home/mog/nami"
-        dest: "/var/www/arbi/libs/"
+        src: "/home/mog/env/ows-cli/.env"
+        dest: "/var/www/ows-cli/.env"
         remote_src: true
 
     - name: Install packages
       npm:
-        path: "/var/www/arbi/"
-
-    - name: Replace keys
-      shell:
-        cmd: "node cli tb replace"
-        chdir: /var/www/arbi/
-
-    # - name: Stop container
-    #   shell:
-    #     cmd: "docker compose down"
-    #     chdir: /var/www/arbi/
-
-    # - name: Run container
-    #   shell:
-    #     cmd: "docker compose up --detach"
-    #     chdir: /var/www/arbi/
-
+        path: "/var/www/ows-cli/"
