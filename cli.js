@@ -52,7 +52,6 @@ tradebot
         if (options.args[0]) {
             offset = options.args[0];
         }
-        
         const {fetchStakeAddresses} = require("./src/cli/main.js");
         const result = await fetchStakeAddresses(offset);
         //console.log(result);
@@ -64,8 +63,12 @@ tradebot
     .command('fetch-data')
     .description('fetch data')
     .action(async (release, options, command) => {
+        let limit = 10;
+        if (options.args[0]) {
+            limit = options.args[0];
+        }
         const {fetchData} = require("./src/cli/main.js");
-        const result = await fetchData();
+        const result = await fetchData(limit);
         console.log(result);
         
         process.exit();

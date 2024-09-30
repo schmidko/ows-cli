@@ -22,14 +22,19 @@ async function main() {
     await client.connect()
 
     //const query = "select pg_size_pretty (pg_database_size ('cexplorer'));";
-    query = "SELECT * FROM multi_asset LIMIT 100;";
+    query = `SELECT * FROM tx_out 
+        LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
+        LEFT JOIN tx ON tx_out.tx_id = tx.id
+        LEFT JOIN block ON tx.block_id = block.id
+        WHERE stake_address.view='stake1uxm97mqnylyssfsmqnvnx5mc0cnuk2t2h5cmd9uhlsj2n3cvz7qm2' ORDER BY time LIMIT 1;`;
 
     const res = await client.query(query)
+console.log(res.rows);
 
-    for (const ele of res.rows) {
-        console.log(ele.name.toString());
+    // for (const ele of res.rows) {
+    //     console.log(ele);
 
-    }
+    // }
     //console.log(res.rows);
     await client.end()
 
@@ -91,7 +96,7 @@ async function fetchStakeAddresses(offset) {
 }
 
 
-async function fetchData() {
+async function fetchData(limit) {
     const {Client} = pg
     const client = new Client(config)
     await client.connect()
@@ -99,7 +104,7 @@ async function fetchData() {
     const {db} = await connectDB();
     const collection = db.collection(collectionName);
     const queryFind = {"ada": {$exists: false}};
-    const result = await collection.find(queryFind).toArray();
+    const result = await collection.find(queryFind).limit(limit).toArray();
     const items = result.length;
 
     //const stakeAddress = "stake1u855tsy086jh2xfuth3t7v4rqqy7gcvywnydh0ldtytsvmgk8pg3l";
@@ -149,11 +154,23 @@ async function fetchData() {
             firstDelegation = res3.rows[0].active_epoch_no;
         }
 
+        const queryFirstTransaction = `SELECT * FROM tx_out 
+        LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
+        LEFT JOIN tx ON tx_out.tx_id = tx.id
+        LEFT JOIN block ON tx.block_id = block.id
+        WHERE stake_address.view='${stakeAddress}' ORDER BY time;`;
+
+        const res4 = await client.query(queryFirstTransaction);
+        const firstTransaction = res4.rows[0].time;
+        const transactionCount = res4.rows.length;
+
         const query = {stakeAddress: stakeAddress};
         const data = {
             $set: {
                 ada: ada,
                 tokenCount: tokenCount,
+                firstTransaction: firstTransaction,
+                transactionCount: transactionCount,
                 firstDelegation: firstDelegation
             }
         };
@@ -161,7 +178,6 @@ async function fetchData() {
 
         const result = await collection.updateOne(query, data, {upsert: true});
         console.log('progress: ' + items + '/' + count);
-
     }
 
 
