@@ -22,11 +22,7 @@ async function main() {
     await client.connect()
 
     //const query = "select pg_size_pretty (pg_database_size ('cexplorer'));";
-    query = `SELECT * FROM tx_out 
-        LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
-        LEFT JOIN tx ON tx_out.tx_id = tx.id
-        LEFT JOIN block ON tx.block_id = block.id
-        WHERE stake_address.view='stake1uxm97mqnylyssfsmqnvnx5mc0cnuk2t2h5cmd9uhlsj2n3cvz7qm2' ORDER BY time LIMIT 1;`;
+    query = `select epoch_no from block where block_no is not null order by block_no desc limit 1;`;
 
     const res = await client.query(query)
 console.log(res.rows);
@@ -109,6 +105,10 @@ async function fetchData(limit) {
 
     //const stakeAddress = "stake1u855tsy086jh2xfuth3t7v4rqqy7gcvywnydh0ldtytsvmgk8pg3l";
 
+    const currentEpochQuery = "select epoch_no from block where block_no is not null order by block_no desc limit 1";
+    const res11 = await client.query(currentEpochQuery);
+    const currentEpoch = res11.rows[0].epoch_no;
+
     let count = 0;
     for (const row of result) {
         count++;
@@ -153,6 +153,7 @@ async function fetchData(limit) {
         if (res3?.rows[0]?.active_epoch_no) {
             firstDelegation = res3.rows[0].active_epoch_no;
         }
+console.log('ff', firstDelegation);
 
         const queryFirstTransaction = `SELECT * FROM tx_out 
         LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
@@ -165,17 +166,12 @@ async function fetchData(limit) {
         const transactionCount = res4.rows.length;
 
         const query = {stakeAddress: stakeAddress};
-        const data = {
-            $set: {
-                ada: ada,
-                tokenCount: tokenCount,
-                firstTransaction: firstTransaction,
-                transactionCount: transactionCount,
-                firstDelegation: firstDelegation
-            }
-        };
-        console.log(data);
+        const output = calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegation, currentEpoch);
+        console.log(output);
 
+        const data = {
+            $set: output
+        };
         const result = await collection.updateOne(query, data, {upsert: true});
         console.log('progress: ' + items + '/' + count);
     }
@@ -183,6 +179,40 @@ async function fetchData(limit) {
 
     await client.end()
     return 1;
+}
+
+function calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch) {
+
+    // walletIndex
+    const walletAgeDays = (currentEpoch - firstDelegationEpoch) * 5;
+    let walletAgeIndex = 5;
+    if (walletAgeDays < 30) {
+        walletAgeIndex = 0;
+    } 
+    if (walletAgeDays > 90) {
+        walletAgeIndex = 15;
+    }
+
+    let output = {
+        balance: ada,
+        balanceAda: ada / 1000000,
+        tokenCount: tokenCount,
+        transactionCount: transactionCount,
+        firstTransaction: firstTransaction,
+        firstDelegationEpoch: firstDelegationEpoch,
+        walletAgeDays: walletAgeDays,
+        scores: {
+            walletAgeIndex: walletAgeIndex,
+            totalTxIndex: 0,
+            balanceIndex: 0,
+            policyCountIndex: 0,
+            stakeDateIndex: 0,
+            reportedIndex: 0,
+            openWalletScore: 0
+        }
+    }
+
+    return output;
 }
 
 module.exports = {
