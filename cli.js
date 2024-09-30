@@ -48,9 +48,6 @@ tradebot
     .command('fetch-addresses')
     .description('fetch addresses')
     .action(async (release, options, command) => {
-
-        console.log(options.args);
-
         let offset = 0;
         if (options.args[0]) {
             offset = options.args[0];
