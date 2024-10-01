@@ -53,7 +53,7 @@ tradebot
             offset = options.args[0];
         }
         const {fetchStakeAddresses} = require("./src/cli/main.js");
-        const result = await fetchStakeAddresses(offset);
+        const result = await fetchStakeAddresses(parseInt(offset));
         //console.log(result);
         
         process.exit();
