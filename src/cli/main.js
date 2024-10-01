@@ -153,7 +153,6 @@ async function fetchData(limit) {
         if (res3?.rows[0]?.active_epoch_no) {
             firstDelegation = res3.rows[0].active_epoch_no;
         }
-console.log('ff', firstDelegation);
 
         const queryFirstTransaction = `SELECT * FROM tx_out 
         LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
@@ -172,8 +171,9 @@ console.log('ff', firstDelegation);
         const data = {
             $set: output
         };
-        const result = await collection.updateOne(query, data, {upsert: true});
-        console.log('progress: ' + items + '/' + count);
+        //const result = await collection.updateOne(query, data, {upsert: true});
+        //console.log('progress: ' + items + '/' + count);
+        return 0;
     }
 
 
@@ -181,34 +181,75 @@ console.log('ff', firstDelegation);
     return 1;
 }
 
-function calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch) {
+function calculateScores(lovelace, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch) {
 
-    // walletIndex
-    const walletAgeDays = (currentEpoch - firstDelegationEpoch) * 5;
-    let walletAgeIndex = 5;
+    let ows = 0;
+    const ada = lovelace / 1000000;
+    const delegationAgeDays = (currentEpoch - firstDelegationEpoch) * 5;
+    const tsFirstTx = new Date(firstTransaction).getTime()
+    const walletAgeDays = Math.round(((Date.now() - tsFirstTx) / 1000) / 86400);
+
+    // wallet age score
+    let walletAgeScore = 5;
     if (walletAgeDays < 30) {
-        walletAgeIndex = 0;
+        walletAgeScore = 0;
     } 
     if (walletAgeDays > 90) {
-        walletAgeIndex = 15;
+        walletAgeScore = 15;
     }
+    ows += walletAgeScore;
+
+    // tx score
+    let txScore = 10;
+    if (transactionCount < 10) {
+        txScore = 0;
+    } else if (transactionCount > 30) {
+        txScore = 20;
+    } 
+    ows += txScore;
+
+    // balance score
+    let balanceScore = 0;
+    if (ada > 30) {
+        balanceScore = 5;
+    }
+    ows += balanceScore;
+
+    // policy count score
+    let tokenCountScore = 5;
+    if (tokenCount < 3) {
+        tokenCountScore = 0;
+    }
+    if (tokenCount > 8) {
+        tokenCountScore = 20;
+    } 
+    ows += tokenCountScore;
+
+    // stake date score
+    let delegationAgeScore = 5;
+    if (delegationAgeDays < 10) {
+        delegationAgeScore = 0;
+    } else if (delegationAgeDays > 30) {
+        delegationAgeScore = 20;
+    } 
+    ows += delegationAgeScore;
 
     let output = {
-        balance: ada,
-        balanceAda: ada / 1000000,
+        balanceLovelace: lovelace,
+        balanceAda: ada,
         tokenCount: tokenCount,
         transactionCount: transactionCount,
         firstTransaction: firstTransaction,
         firstDelegationEpoch: firstDelegationEpoch,
         walletAgeDays: walletAgeDays,
+        delegationAgeDays: delegationAgeDays,
         scores: {
-            walletAgeIndex: walletAgeIndex,
-            totalTxIndex: 0,
-            balanceIndex: 0,
-            policyCountIndex: 0,
-            stakeDateIndex: 0,
-            reportedIndex: 0,
-            openWalletScore: 0
+            walletAgeScore: walletAgeScore,
+            txScore: txScore,
+            balanceScore: balanceScore,
+            policyCountScore: tokenCountScore,
+            delegationAgeScore: delegationAgeScore,
+            openWalletScore: ows
         }
     }
 
