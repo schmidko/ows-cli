@@ -161,7 +161,10 @@ async function fetchData(limit) {
         WHERE stake_address.view='${stakeAddress}' ORDER BY time;`;
 
         const res4 = await client.query(queryFirstTransaction);
-        const firstTransaction = res4.rows[0].time;
+        const firstTransaction = null;
+        if (res4.rows[0].time) {
+            firstTransaction = res4.rows[0].time;
+        }
         const transactionCount = res4.rows.length;
 
         const query = {stakeAddress: stakeAddress};
@@ -185,8 +188,13 @@ function calculateScores(lovelace, transactionCount, firstTransaction, tokenCoun
     let ows = 0;
     const ada = lovelace / 1000000;
     const delegationAgeDays = (currentEpoch - firstDelegationEpoch) * 5;
-    const tsFirstTx = new Date(firstTransaction).getTime()
-    const walletAgeDays = Math.round(((Date.now() - tsFirstTx) / 1000) / 86400);
+    
+    const tsFirstTx = 0;
+    const walletAgeDays = 0;
+    if (firstTransaction) {
+        tsFirstTx = new Date(firstTransaction).getTime();
+        walletAgeDays = Math.round(((Date.now() - tsFirstTx) / 1000) / 86400);
+    }
 
     // wallet age score
     let walletAgeScore = 5;
