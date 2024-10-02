@@ -99,7 +99,7 @@ async function fetchData(limit) {
 
     const {db} = await connectDB();
     const collection = db.collection(collectionName);
-    const queryFind = {"ada": {$exists: false}};
+    const queryFind = {"date": {$exists: false}};
     const result = await collection.find(queryFind).limit(limit).toArray();
     const items = result.length;
 
