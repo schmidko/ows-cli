@@ -189,8 +189,8 @@ function calculateScores(lovelace, transactionCount, firstTransaction, tokenCoun
     const ada = lovelace / 1000000;
     const delegationAgeDays = (currentEpoch - firstDelegationEpoch) * 5;
     
-    const tsFirstTx = 0;
-    const walletAgeDays = 0;
+    let tsFirstTx = 0;
+    let walletAgeDays = 0;
     if (firstTransaction) {
         tsFirstTx = new Date(firstTransaction).getTime();
         walletAgeDays = Math.round(((Date.now() - tsFirstTx) / 1000) / 86400);
