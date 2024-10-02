@@ -161,7 +161,7 @@ async function fetchData(limit) {
         WHERE stake_address.view='${stakeAddress}' ORDER BY time;`;
 
         const res4 = await client.query(queryFirstTransaction);
-        const firstTransaction = null;
+        let firstTransaction = null;
         if (res4.rows[0].time) {
             firstTransaction = res4.rows[0].time;
         }
