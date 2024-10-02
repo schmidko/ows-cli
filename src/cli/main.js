@@ -166,19 +166,18 @@ async function fetchData(limit) {
 
         const query = {stakeAddress: stakeAddress};
         const output = calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegation, currentEpoch);
-        console.log(output);
+        
+        //console.log(output);
 
         const data = {
             $set: output
         };
-        //const result = await collection.updateOne(query, data, {upsert: true});
-        //console.log('progress: ' + items + '/' + count);
-        return 0;
+        const result = await collection.updateOne(query, data, {upsert: true});
+        console.log('progress: ' + items + '/' + count);
     }
 
-
     await client.end()
-    return 1;
+    return "Data fetching done!!";
 }
 
 function calculateScores(lovelace, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch) {
@@ -243,6 +242,7 @@ function calculateScores(lovelace, transactionCount, firstTransaction, tokenCoun
         firstDelegationEpoch: firstDelegationEpoch,
         walletAgeDays: walletAgeDays,
         delegationAgeDays: delegationAgeDays,
+        date: new Date(),
         scores: {
             walletAgeScore: walletAgeScore,
             txScore: txScore,
