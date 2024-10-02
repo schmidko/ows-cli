@@ -68,7 +68,7 @@ tradebot
             limit = options.args[0];
         }
         const {fetchData} = require("./src/cli/main.js");
-        const result = await fetchData(limit);
+        const result = await fetchData(parseInt(limit));
         console.log(result);
         
         process.exit();
