@@ -162,7 +162,7 @@ async function fetchData(limit) {
 
         const res4 = await client.query(queryFirstTransaction);
         let firstTransaction = null;
-        if (res4.rows[0].time) {
+        if (res4.rows[0]?.time) {
             firstTransaction = res4.rows[0].time;
         }
         const transactionCount = res4.rows.length;
