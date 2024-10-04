@@ -3,6 +3,8 @@ services:
   mongodb:
     image: mongo:latest
     container_name: mongodb
+    networks:
+      - ows
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: knut
