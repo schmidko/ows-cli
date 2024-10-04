@@ -3,8 +3,6 @@ services:
   mongodb:
     image: mongo:latest
     container_name: mongodb
-    networks:
-      - ows
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: knut
@@ -12,7 +10,9 @@ services:
       - 27055:27017
     volumes:
       - /home/mog/mongo_data:/data/db
-
+    networks:
+      - ows
+      
   # postgres:
   #   image: postgres:14-alpine
   #   ports:
