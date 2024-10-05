@@ -22,7 +22,15 @@ async function main() {
     await client.connect()
 
     //const query = "select pg_size_pretty (pg_database_size ('cexplorer'));";
-    query = `select epoch_no from block where block_no is not null order by block_no desc limit 1;`;
+    //query = `select epoch_no from block where block_no is not null order by block_no desc limit 1;`;
+    query = `SELECT DISTINCT stake_address.id as stake_address_id, tx_out.address, stake_address.view as stake_address
+	    from stake_address left join tx_out on tx_out.stake_address_id = stake_address.id
+	    where address = 'addr1qy0trqnxl70zyk2hgnqe4sep5ah99fcuk9v900hajr9pkf8rzr27g03klu862usxqsru794d03gzkk8n86ta34n85z0sl82634';`;
+
+    // query = `select *
+	//     from tx_out 
+	//     where address = 'addr1qx2pcr8wz8y0fj3640fwu0jldeewxr2gtdjr9ex50m8f3y75rq53r3p6erlvh4ts0w8mf0wt64kfguawm6layetf5p2saw4fzj';`;
+
 
     const res = await client.query(query)
 console.log(res.rows);
@@ -102,8 +110,6 @@ async function fetchData(limit) {
     const queryFind = {"date": {$exists: false}};
     const result = await collection.find(queryFind).limit(limit).toArray();
     const items = result.length;
-
-    //const stakeAddress = "stake1u855tsy086jh2xfuth3t7v4rqqy7gcvywnydh0ldtytsvmgk8pg3l";
 
     const currentEpochQuery = "select epoch_no from block where block_no is not null order by block_no desc limit 1";
     const res11 = await client.query(currentEpochQuery);

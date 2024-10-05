@@ -35,8 +35,6 @@ services:
   #     - /var/www/arbi:/app
   #   ports:
   #     - "4554:4554"
-#volumes:
-  #app:
 
 networks:
   ows:
