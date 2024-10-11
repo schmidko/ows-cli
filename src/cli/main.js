@@ -185,7 +185,7 @@ async function fetchData(limit) {
             $set: output
         };
         const result = await collection.updateOne(query, data, {upsert: true});
-        console.log('progress: ' + items + '/' + count);
+        console.log('progress: ' + items + '/' + count + ' ' + stakeAddress);
     }
 
     await client.end();
