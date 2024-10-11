@@ -23,18 +23,6 @@ services:
   #     - POSTGRES_PASSWORD=knut
   #     - POSTGRES_USER=root
   #     - POSTGRES_DB=ows
-      
-  # node:
-  #   image: "node"
-  #   container_name: arbi
-  #   working_dir: /app
-  #   environment:
-  #     - NODE_ENV=production
-  #     - /home/mog/env/arbi/.env
-  #   volumes:
-  #     - /var/www/arbi:/app
-  #   ports:
-  #     - "4554:4554"
 
 networks:
   ows:
