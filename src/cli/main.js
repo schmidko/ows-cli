@@ -40,7 +40,7 @@ console.log(res.rows);
 
     // }
     //console.log(res.rows);
-    
+    await client.end();
 
 }
 
@@ -188,7 +188,7 @@ async function fetchData(limit) {
         console.log('progress: ' + items + '/' + count);
     }
 
-    await client.end()
+    await client.end();
     return "Data fetching done!!";
 }
 
