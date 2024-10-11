@@ -108,7 +108,7 @@ async function fetchData(limit) {
     const {db} = await connectDB();
     const collection = db.collection(collectionName);
     const queryFind = {"date": {$exists: false}};
-    const itemsLeft = await collection.count(queryFind);
+    const itemsLeft = await collection.countDocuments(queryFind);
     console.log('items left: ', itemsLeft);
     
     const result = await collection.find(queryFind).limit(limit).toArray();
