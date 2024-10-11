@@ -122,6 +122,7 @@ async function fetchData(limit) {
     for (const row of result) {
         count++;
         const stakeAddress = row.stakeAddress;
+        console.log('progress: ' + items + '/' + count + ' ' + stakeAddress);
 
         const queryAda = `SELECT sum(tx_out.value)
         from stake_address
@@ -185,7 +186,7 @@ async function fetchData(limit) {
             $set: output
         };
         const result = await collection.updateOne(query, data, {upsert: true});
-        console.log('progress: ' + items + '/' + count + ' ' + stakeAddress);
+        
     }
 
     await client.end();
