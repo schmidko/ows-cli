@@ -23,9 +23,9 @@ async function main() {
 
     //const query = "select pg_size_pretty (pg_database_size ('cexplorer'));";
     //query = `select epoch_no from block where block_no is not null order by block_no desc limit 1;`;
-    query = `SELECT DISTINCT stake_address.id as stake_address_id, tx_out.address, stake_address.view as stake_address
-	    from stake_address left join tx_out on tx_out.stake_address_id = stake_address.id
-	    where address = 'addr1qy0trqnxl70zyk2hgnqe4sep5ah99fcuk9v900hajr9pkf8rzr27g03klu862usxqsru794d03gzkk8n86ta34n85z0sl82634';`;
+    // query = `SELECT DISTINCT stake_address.id as stake_address_id, tx_out.address, stake_address.view as stake_address
+	//     from stake_address left join tx_out on tx_out.stake_address_id = stake_address.id
+	//     where address = 'addr1q9gs82pgf9qtsk7y3q6rjl865ekarfclvv5cgkn590f8vwyf7qhd9cujruftw2p44q6d9que4kcjpttcxreu022vc7gsyyzqk9';`;
 
     // query = `select *
 	//     from tx_out 
@@ -40,7 +40,7 @@ console.log(res.rows);
 
     // }
     //console.log(res.rows);
-    await client.end()
+    
 
 }
 
@@ -108,6 +108,9 @@ async function fetchData(limit) {
     const {db} = await connectDB();
     const collection = db.collection(collectionName);
     const queryFind = {"date": {$exists: false}};
+    const itemsLeft = await collection.count(queryFind);
+    console.log('items left: ', itemsLeft);
+    
     const result = await collection.find(queryFind).limit(limit).toArray();
     const items = result.length;
 
@@ -155,9 +158,9 @@ async function fetchData(limit) {
             where stake_address.view = '${stakeAddress}'
             order by active_epoch_no asc;`;
         const res3 = await client.query(queryDelegation);
-        let firstDelegation = 0;
+        let firstDelegationEpoch = 0;
         if (res3?.rows[0]?.active_epoch_no) {
-            firstDelegation = res3.rows[0].active_epoch_no;
+            firstDelegationEpoch = parseInt(res3.rows[0].active_epoch_no);
         }
 
         const queryFirstTransaction = `SELECT * FROM tx_out 
@@ -174,7 +177,7 @@ async function fetchData(limit) {
         const transactionCount = res4.rows.length;
 
         const query = {stakeAddress: stakeAddress};
-        const output = calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegation, currentEpoch);
+        const output = calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch);
         
         //console.log(output);
 
