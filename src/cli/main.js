@@ -31,8 +31,15 @@ async function main() {
 	//     from tx_out 
 	//     where address = 'addr1qx2pcr8wz8y0fj3640fwu0jldeewxr2gtdjr9ex50m8f3y75rq53r3p6erlvh4ts0w8mf0wt64kfguawm6layetf5p2saw4fzj';`;
 
+    const stakeAddress = "stake1uxm97mqnylyssfsmqnvnx5mc0cnuk2t2h5cmd9uhlsj2n3cvz7qm2";
 
-    const res = await client.query(query)
+    const queryFirstTransaction = `SELECT * FROM tx_out 
+        LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
+        LEFT JOIN tx ON tx_out.tx_id = tx.id
+        LEFT JOIN block ON tx.block_id = block.id
+        WHERE stake_address.view='${stakeAddress}' ORDER BY time LIMIT 10;`;
+
+    const res = await client.query(queryFirstTransaction)
 console.log(res.rows);
 
     // for (const ele of res.rows) {
@@ -168,7 +175,7 @@ async function fetchData(limit) {
         LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
         LEFT JOIN tx ON tx_out.tx_id = tx.id
         LEFT JOIN block ON tx.block_id = block.id
-        WHERE stake_address.view='${stakeAddress}' ORDER BY time;`;
+        WHERE stake_address.view='${stakeAddress}' ORDER BY time LIMIT 10;`;
 
         const res4 = await client.query(queryFirstTransaction);
         let firstTransaction = null;
