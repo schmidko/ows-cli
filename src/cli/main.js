@@ -87,7 +87,6 @@ async function fetchStakeAddresses(offset) {
     const {db} = await connectDB();
     const collection = db.collection(collectionName);
 
-    //offset = 4900000;
     let resultPg = null;
     do {
         const query = `SELECT * FROM stake_address ORDER BY id LIMIT 100 OFFSET ${offset};`;
@@ -109,8 +108,9 @@ async function fetchStakeAddresses(offset) {
         offset += 100;
         let percent = (100/rowCount) * offset;
         percent = Math.round(percent * 1000) / 1000;
-        console.log(percent + '% stake addresses inserted!!');
-        
+        if (offset % 1000 === 0) {
+            console.log(percent + '% stake addresses inserted!!');
+        }
     } while (resultPg.length > 0);
 
     await client.end()
