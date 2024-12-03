@@ -21,19 +21,7 @@ async function main() {
     const client = new Client(config)
     await client.connect()
 
-    //const query = "select pg_size_pretty (pg_database_size ('cexplorer'));";
-    //query = `select epoch_no from block where block_no is not null order by block_no desc limit 1;`;
-    // query = `SELECT DISTINCT stake_address.id as stake_address_id, tx_out.address, stake_address.view as stake_address
-	//     from stake_address left join tx_out on tx_out.stake_address_id = stake_address.id
-	//     where address = 'addr1q9gs82pgf9qtsk7y3q6rjl865ekarfclvv5cgkn590f8vwyf7qhd9cujruftw2p44q6d9que4kcjpttcxreu022vc7gsyyzqk9';`;
-
-    // query = `select *
-	//     from tx_out 
-	//     where address = 'addr1qx2pcr8wz8y0fj3640fwu0jldeewxr2gtdjr9ex50m8f3y75rq53r3p6erlvh4ts0w8mf0wt64kfguawm6layetf5p2saw4fzj';`;
-
     const stakeAddress = "stake1uxm97mqnylyssfsmqnvnx5mc0cnuk2t2h5cmd9uhlsj2n3cvz7qm2";
-
-    const lol2 = `SELECT * FROM off_chain_pool_data LIMIT 10 OFFSET 2000`;
 
     const lol = `SELECT * from delegation
             inner join stake_address on delegation.addr_id = stake_address.id
@@ -42,7 +30,7 @@ async function main() {
             where stake_address.view = '${stakeAddress}'
             order by active_epoch_no asc;`;
     const res = await client.query(lol);
-        
+
 
     // const queryFirstTransaction = `SELECT * FROM tx_out 
     //     LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
@@ -51,7 +39,7 @@ async function main() {
     //     WHERE stake_address.view='${stakeAddress}' ORDER BY time LIMIT 10;`;
 
     // const res = await client.query(queryFirstTransaction)
-console.log(res.rows);
+    console.log(res.rows);
 
     // for (const ele of res.rows) {
     //     console.log(ele);
@@ -94,8 +82,6 @@ async function fetchStakeAddresses(offset) {
         resultPg = res.rows
 
         for (const row of resultPg) {
-            //console.log(row.view);
-            
             const filter = {stakeAddress: row.view};
             const data = {
                 $set: {
@@ -106,7 +92,7 @@ async function fetchStakeAddresses(offset) {
 
         }
         offset += 100;
-        let percent = (100/rowCount) * offset;
+        let percent = (100 / rowCount) * offset;
         percent = Math.round(percent * 1000) / 1000;
         if (offset % 1000 === 0) {
             console.log(percent + '% stake addresses inserted!!');
@@ -125,10 +111,17 @@ async function fetchData(limit) {
 
     const {db} = await connectDB();
     const collection = db.collection(collectionName);
-    const queryFind = {"date": {$exists: false}};
+    const queryFind = {
+        $or:
+            [
+                {"date": {$exists: false}},
+                {"date": {$lt: new Date("2024-12-01T00:00:00Z")}},
+            ]
+    };
+
     const itemsLeft = await collection.countDocuments(queryFind);
     console.log('items left: ', itemsLeft);
-    
+
     const result = await collection.find(queryFind).limit(limit).toArray();
     const items = result.length;
 
@@ -200,9 +193,6 @@ async function fetchData(limit) {
             poolInfo.delegated = true;
         }
 
-        console.log('dd', poolInfo);
-        
-
         // first transaction
         const queryFirstTransaction = `SELECT * FROM tx_out 
         LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
@@ -218,27 +208,27 @@ async function fetchData(limit) {
         const transactionCount = res4.rows.length;
 
         const query = {stakeAddress: stakeAddress};
-        const output = calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch);
-        
+        const output = calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch, poolInfo);
+
         console.log(output);
 
         const data = {
             $set: output
         };
         //const result = await collection.updateOne(query, data, {upsert: true});
-        
+
     }
 
     await client.end();
     return "Data fetching done!!";
 }
 
-function calculateScores(lovelace, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch) {
+function calculateScores(lovelace, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch, poolInfo) {
 
     let ows = 0;
     const ada = lovelace / 1000000;
     const delegationAgeDays = (currentEpoch - firstDelegationEpoch) * 5;
-    
+
     let tsFirstTx = 0;
     let walletAgeDays = 0;
     if (firstTransaction) {
@@ -250,7 +240,7 @@ function calculateScores(lovelace, transactionCount, firstTransaction, tokenCoun
     let walletAgeScore = 5;
     if (walletAgeDays < 30) {
         walletAgeScore = 0;
-    } 
+    }
     if (walletAgeDays > 90) {
         walletAgeScore = 15;
     }
@@ -262,7 +252,7 @@ function calculateScores(lovelace, transactionCount, firstTransaction, tokenCoun
         txScore = 0;
     } else if (transactionCount > 30) {
         txScore = 20;
-    } 
+    }
     ows += txScore;
 
     // balance score
@@ -279,7 +269,7 @@ function calculateScores(lovelace, transactionCount, firstTransaction, tokenCoun
     }
     if (tokenCount > 8) {
         tokenCountScore = 20;
-    } 
+    }
     ows += tokenCountScore;
 
     // stake date score
@@ -288,7 +278,7 @@ function calculateScores(lovelace, transactionCount, firstTransaction, tokenCoun
         delegationAgeScore = 0;
     } else if (delegationAgeDays > 30) {
         delegationAgeScore = 20;
-    } 
+    }
     ows += delegationAgeScore;
 
     let output = {
@@ -301,6 +291,7 @@ function calculateScores(lovelace, transactionCount, firstTransaction, tokenCoun
         walletAgeDays: walletAgeDays,
         delegationAgeDays: delegationAgeDays,
         date: new Date(),
+        poolInfo: poolInfo,
         scores: {
             walletAgeScore: walletAgeScore,
             txScore: txScore,
