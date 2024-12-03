@@ -23,14 +23,14 @@ global.LOG = {
 
 const tradebot = program.command('ows');
 tradebot
-    .description('tradebot')
-    .command('start')
+    .description('ows test')
+    .command('test')
     .description('Start the aggregation')
     .action(async (release, options, command) => {
         const {main} = require("./src/cli/main.js");
         const result = await main();
-        console.log('Aggregation started!!!');
-        //process.exit();
+        
+        process.exit();
     });
 
 tradebot

@@ -33,13 +33,24 @@ async function main() {
 
     const stakeAddress = "stake1uxm97mqnylyssfsmqnvnx5mc0cnuk2t2h5cmd9uhlsj2n3cvz7qm2";
 
-    const queryFirstTransaction = `SELECT * FROM tx_out 
-        LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
-        LEFT JOIN tx ON tx_out.tx_id = tx.id
-        LEFT JOIN block ON tx.block_id = block.id
-        WHERE stake_address.view='${stakeAddress}' ORDER BY time LIMIT 10;`;
+    const lol2 = `SELECT * FROM off_chain_pool_data LIMIT 10 OFFSET 2000`;
 
-    const res = await client.query(queryFirstTransaction)
+    const lol = `SELECT * from delegation
+            inner join stake_address on delegation.addr_id = stake_address.id
+            inner join pool_hash on delegation.pool_hash_id = pool_hash.id
+            inner join off_chain_pool_data ON off_chain_pool_data.pool_id = pool_hash.id
+            where stake_address.view = '${stakeAddress}'
+            order by active_epoch_no asc;`;
+    const res = await client.query(lol);
+        
+
+    // const queryFirstTransaction = `SELECT * FROM tx_out 
+    //     LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
+    //     LEFT JOIN tx ON tx_out.tx_id = tx.id
+    //     LEFT JOIN block ON tx.block_id = block.id
+    //     WHERE stake_address.view='${stakeAddress}' ORDER BY time LIMIT 10;`;
+
+    // const res = await client.query(queryFirstTransaction)
 console.log(res.rows);
 
     // for (const ele of res.rows) {
@@ -131,6 +142,7 @@ async function fetchData(limit) {
         const stakeAddress = row.stakeAddress;
         console.log('progress: ' + items + '/' + count + ' ' + stakeAddress);
 
+        // ada balance
         const queryAda = `SELECT sum(tx_out.value)
         from stake_address
         inner join tx_out on tx_out.stake_address_id = stake_address.id
@@ -143,6 +155,7 @@ async function fetchData(limit) {
             ada = res1.rows[0].sum;
         }
 
+        // token count
         const queryCoins = `SELECT encode(ma.policy::bytea, 'hex') as policy, ma.fingerprint, SUM(matxo.quantity) AS total_quantity
             FROM tx_out AS txo
             LEFT JOIN tx_in AS txi ON txo.tx_id = txi.tx_out_id AND txo.index::smallint = txi.tx_out_index::smallint 
@@ -160,6 +173,7 @@ async function fetchData(limit) {
         const res2 = await client.query(queryCoins);
         const tokenCount = res2.rows.length;
 
+        // first delegation
         const queryDelegation = `SELECT delegation.active_epoch_no, pool_hash.view from delegation
             inner join stake_address on delegation.addr_id = stake_address.id
             inner join pool_hash on delegation.pool_hash_id = pool_hash.id
@@ -171,6 +185,25 @@ async function fetchData(limit) {
             firstDelegationEpoch = parseInt(res3.rows[0].active_epoch_no);
         }
 
+        // pool name
+        const queryPoolName = `SELECT * from delegation
+            inner join stake_address on delegation.addr_id = stake_address.id
+            inner join pool_hash on delegation.pool_hash_id = pool_hash.id
+            inner join off_chain_pool_data ON off_chain_pool_data.pool_id = pool_hash.id
+            where stake_address.view = '${stakeAddress}'
+            order by active_epoch_no asc;`;
+        const res33 = await client.query(queryPoolName);
+        let poolInfo = {"delegated": false, ticker: "", name: ""};
+        if (res33.rows.at(-1)?.json) {
+            poolInfo.ticker = res33.rows.at(-1).json.ticker;
+            poolInfo.name = res33.rows.at(-1).json.name;
+            poolInfo.delegated = true;
+        }
+
+        console.log('dd', poolInfo);
+        
+
+        // first transaction
         const queryFirstTransaction = `SELECT * FROM tx_out 
         LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
         LEFT JOIN tx ON tx_out.tx_id = tx.id
@@ -187,12 +220,12 @@ async function fetchData(limit) {
         const query = {stakeAddress: stakeAddress};
         const output = calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch);
         
-        //console.log(output);
+        console.log(output);
 
         const data = {
             $set: output
         };
-        const result = await collection.updateOne(query, data, {upsert: true});
+        //const result = await collection.updateOne(query, data, {upsert: true});
         
     }
 
