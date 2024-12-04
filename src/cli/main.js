@@ -215,8 +215,7 @@ async function fetchData(limit) {
         const data = {
             $set: output
         };
-        //const result = await collection.updateOne(query, data, {upsert: true});
-
+        const result = await collection.updateOne(query, data, {upsert: true});
     }
 
     await client.end();
