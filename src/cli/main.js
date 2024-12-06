@@ -127,15 +127,13 @@ async function fetchData(limit) {
             return "Finished!!"
         } 
 
-        const result = await collection.find(queryFind).limit(1000).toArray();
-        const items = result.length;
-
+        const items = await collection.find(queryFind).limit(1000).toArray();
         const currentEpochQuery = "select epoch_no from block where block_no is not null order by block_no desc limit 1";
         const res11 = await client.query(currentEpochQuery);
         const currentEpoch = res11.rows[0].epoch_no;
 
         let count = 0;
-        for (const row of result) {
+        for (const row of items) {
             count++;
             const stakeAddress = row.stakeAddress;
             console.log('progress: ' + itemsLeft + '/' + (itemsLeft-count) + ' ' + stakeAddress);
