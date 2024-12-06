@@ -111,7 +111,7 @@ async function fetchData(limit) {
 
     const {db} = await connectDB();
     const collection = db.collection(collectionName);
-    const queryFind = {
+    let queryFind = {
         $or:
             [
                 {"date": {$exists: false}},
@@ -119,37 +119,42 @@ async function fetchData(limit) {
             ]
     };
 
-    const itemsLeft = await collection.countDocuments(queryFind);
-    console.log('items left: ', itemsLeft);
+    for (let i = 0; i < 10000; i++) { // 10000 * 1000 = 1M querys
 
-    const result = await collection.find(queryFind).limit(limit).toArray();
-    const items = result.length;
+        const itemsLeft = await collection.countDocuments(queryFind);
+        console.log('items left: ', itemsLeft);
+        if (itemsLeft == 0) {
+            return "Finished!!"
+        } 
 
-    const currentEpochQuery = "select epoch_no from block where block_no is not null order by block_no desc limit 1";
-    const res11 = await client.query(currentEpochQuery);
-    const currentEpoch = res11.rows[0].epoch_no;
+        const result = await collection.find(queryFind).limit(1000).toArray();
+        const items = result.length;
 
-    let count = 0;
-    for (const row of result) {
-        count++;
-        const stakeAddress = row.stakeAddress;
-        console.log('progress: ' + items + '/' + count + ' ' + stakeAddress);
+        const currentEpochQuery = "select epoch_no from block where block_no is not null order by block_no desc limit 1";
+        const res11 = await client.query(currentEpochQuery);
+        const currentEpoch = res11.rows[0].epoch_no;
 
-        // ada balance
-        const queryAda = `SELECT sum(tx_out.value)
+        let count = 0;
+        for (const row of result) {
+            count++;
+            const stakeAddress = row.stakeAddress;
+            console.log('progress: ' + itemsLeft + '/' + (itemsLeft-count) + ' ' + stakeAddress);
+
+            // ada balance
+            const queryAda = `SELECT sum(tx_out.value)
         from stake_address
         inner join tx_out on tx_out.stake_address_id = stake_address.id
         left join tx_in on tx_in.tx_out_id = tx_out.tx_id and tx_in.tx_out_index = tx_out.index
         where stake_address.view = '${stakeAddress}'
         AND tx_in.id is null;`;
-        const res1 = await client.query(queryAda);
-        let ada = 0;
-        if (res1.rows[0].sum) {
-            ada = res1.rows[0].sum;
-        }
+            const res1 = await client.query(queryAda);
+            let ada = 0;
+            if (res1.rows[0].sum) {
+                ada = res1.rows[0].sum;
+            }
 
-        // token count
-        const queryCoins = `SELECT encode(ma.policy::bytea, 'hex') as policy, ma.fingerprint, SUM(matxo.quantity) AS total_quantity
+            // token count
+            const queryCoins = `SELECT encode(ma.policy::bytea, 'hex') as policy, ma.fingerprint, SUM(matxo.quantity) AS total_quantity
             FROM tx_out AS txo
             LEFT JOIN tx_in AS txi ON txo.tx_id = txi.tx_out_id AND txo.index::smallint = txi.tx_out_index::smallint 
             LEFT JOIN tx ON tx.id = txo.tx_id
@@ -163,59 +168,60 @@ async function fetchData(limit) {
             AND ma.policy IS NOT NULL 
             group by ma.fingerprint, ma.policy 
             order by total_quantity desc;`;
-        const res2 = await client.query(queryCoins);
-        const tokenCount = res2.rows.length;
+            const res2 = await client.query(queryCoins);
+            const tokenCount = res2.rows.length;
 
-        // first delegation
-        const queryDelegation = `SELECT delegation.active_epoch_no, pool_hash.view from delegation
+            // first delegation
+            const queryDelegation = `SELECT delegation.active_epoch_no, pool_hash.view from delegation
             inner join stake_address on delegation.addr_id = stake_address.id
             inner join pool_hash on delegation.pool_hash_id = pool_hash.id
             where stake_address.view = '${stakeAddress}'
             order by active_epoch_no asc;`;
-        const res3 = await client.query(queryDelegation);
-        let firstDelegationEpoch = 0;
-        if (res3?.rows[0]?.active_epoch_no) {
-            firstDelegationEpoch = parseInt(res3.rows[0].active_epoch_no);
-        }
+            const res3 = await client.query(queryDelegation);
+            let firstDelegationEpoch = 0;
+            if (res3?.rows[0]?.active_epoch_no) {
+                firstDelegationEpoch = parseInt(res3.rows[0].active_epoch_no);
+            }
 
-        // pool name
-        const queryPoolName = `SELECT * from delegation
+            // pool name
+            const queryPoolName = `SELECT * from delegation
             inner join stake_address on delegation.addr_id = stake_address.id
             inner join pool_hash on delegation.pool_hash_id = pool_hash.id
             inner join off_chain_pool_data ON off_chain_pool_data.pool_id = pool_hash.id
             where stake_address.view = '${stakeAddress}'
             order by active_epoch_no asc;`;
-        const res33 = await client.query(queryPoolName);
-        let poolInfo = {"delegated": false, ticker: "", name: ""};
-        if (res33.rows.at(-1)?.json) {
-            poolInfo.ticker = res33.rows.at(-1).json.ticker;
-            poolInfo.name = res33.rows.at(-1).json.name;
-            poolInfo.delegated = true;
-        }
+            const res33 = await client.query(queryPoolName);
+            let poolInfo = {"delegated": false, ticker: "", name: ""};
+            if (res33.rows.at(-1)?.json) {
+                poolInfo.ticker = res33.rows.at(-1).json.ticker;
+                poolInfo.name = res33.rows.at(-1).json.name;
+                poolInfo.delegated = true;
+            }
 
-        // first transaction
-        const queryFirstTransaction = `SELECT * FROM tx_out 
+            // first transaction
+            const queryFirstTransaction = `SELECT * FROM tx_out 
         LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
         LEFT JOIN tx ON tx_out.tx_id = tx.id
         LEFT JOIN block ON tx.block_id = block.id
         WHERE stake_address.view='${stakeAddress}' ORDER BY time LIMIT 10;`;
 
-        const res4 = await client.query(queryFirstTransaction);
-        let firstTransaction = null;
-        if (res4.rows[0]?.time) {
-            firstTransaction = res4.rows[0].time;
+            const res4 = await client.query(queryFirstTransaction);
+            let firstTransaction = null;
+            if (res4.rows[0]?.time) {
+                firstTransaction = res4.rows[0].time;
+            }
+            const transactionCount = res4.rows.length;
+
+            const query = {stakeAddress: stakeAddress};
+            const output = calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch, poolInfo);
+
+            console.log(output);
+
+            const data = {
+                $set: output
+            };
+            const result = await collection.updateOne(query, data, {upsert: true});
         }
-        const transactionCount = res4.rows.length;
-
-        const query = {stakeAddress: stakeAddress};
-        const output = calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch, poolInfo);
-
-        console.log(output);
-
-        const data = {
-            $set: output
-        };
-        const result = await collection.updateOne(query, data, {upsert: true});
     }
 
     await client.end();
