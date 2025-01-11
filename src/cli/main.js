@@ -23,14 +23,33 @@ async function main() {
 
     const stakeAddress = "stake1uxm97mqnylyssfsmqnvnx5mc0cnuk2t2h5cmd9uhlsj2n3cvz7qm2";
 
-    const lol = `SELECT * from delegation
-            inner join stake_address on delegation.addr_id = stake_address.id
-            inner join pool_hash on delegation.pool_hash_id = pool_hash.id
-            inner join off_chain_pool_data ON off_chain_pool_data.pool_id = pool_hash.id
-            where stake_address.view = '${stakeAddress}'
-            order by active_epoch_no asc;`;
-    const res = await client.query(lol);
+    // const lol = `SELECT * from delegation
+    //         inner join stake_address on delegation.addr_id = stake_address.id
+    //         inner join pool_hash on delegation.pool_hash_id = pool_hash.id
+    //         inner join off_chain_pool_data ON off_chain_pool_data.pool_id = pool_hash.id
+    //         where stake_address.view = '${stakeAddress}'
+    //         order by active_epoch_no asc;`;
+    // const res = await client.query(lol);
 
+
+    const lol4 = `SELECT encode(ma.policy::bytea, 'hex') as policy, ma.fingerprint, SUM(matxo.quantity) AS total_quantity
+    FROM tx_out AS txo
+    LEFT JOIN tx_in AS txi ON txo.tx_id = txi.tx_out_id AND txo.index::smallint = txi.tx_out_index::smallint 
+    LEFT JOIN tx ON tx.id = txo.tx_id
+    LEFT JOIN block ON tx.block_id = block.id 
+    LEFT JOIN stake_address AS sa ON txo.stake_address_id = sa.id 
+    LEFT JOIN ma_tx_out AS matxo ON matxo.tx_out_id = txo.id 
+    LEFT JOIN multi_asset AS ma ON ma.id = matxo.ident 
+    WHERE sa.view = '${stakeAddress}' 
+    AND txi.tx_in_id IS NULL 
+    AND block.epoch_no IS NOT NULL 
+    AND ma.policy IS NOT NULL 
+    group by ma.fingerprint, ma.policy 
+    order by total_quantity desc;`;
+    const res2 = await client.query(lol4);
+
+    console.log(res2);
+    
 
     // const queryFirstTransaction = `SELECT * FROM tx_out 
     //     LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
