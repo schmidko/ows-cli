@@ -14,6 +14,7 @@ const config = {
 };
 
 const collectionName = "addresses";
+const collectionNamePolices = "assets";
 
 async function main() {
 
@@ -49,7 +50,7 @@ async function main() {
     const res2 = await client.query(lol4);
 
     console.log(res2);
-    
+
 
     // const queryFirstTransaction = `SELECT * FROM tx_out 
     //     LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
@@ -134,7 +135,7 @@ async function fetchData(limit) {
         $or:
             [
                 {"date": {$exists: false}},
-                {"date": {$lt: new Date("2024-12-01T00:00:00Z")}},
+                {"date": {$lt: new Date("2025-01-01T00:00:00Z")}},
             ]
     };
 
@@ -144,10 +145,10 @@ async function fetchData(limit) {
         console.log('items left: ', itemsLeft);
         if (itemsLeft == 0) {
             return "Finished!!"
-        } 
+        }
 
         const items = await collection.find(queryFind).limit(1000).toArray();
-        const currentEpochQuery = "select epoch_no from block where block_no is not null order by block_no desc limit 1";
+        const currentEpochQuery = "SELECT epoch_no from block where block_no is not null order by block_no desc limit 1;";
         const res11 = await client.query(currentEpochQuery);
         const currentEpoch = res11.rows[0].epoch_no;
 
@@ -155,15 +156,15 @@ async function fetchData(limit) {
         for (const row of items) {
             count++;
             const stakeAddress = row.stakeAddress;
-            console.log('progress: ' + itemsLeft + '/' + (itemsLeft-count) + ' ' + stakeAddress);
+            console.log('progress: ' + itemsLeft + '/' + (itemsLeft - count) + ' ' + stakeAddress);
 
             // ada balance
             const queryAda = `SELECT sum(tx_out.value)
-        from stake_address
-        inner join tx_out on tx_out.stake_address_id = stake_address.id
-        left join tx_in on tx_in.tx_out_id = tx_out.tx_id and tx_in.tx_out_index = tx_out.index
-        where stake_address.view = '${stakeAddress}'
-        AND tx_in.id is null;`;
+                FROM stake_address
+                inner join tx_out on tx_out.stake_address_id = stake_address.id
+                left join tx_in on tx_in.tx_out_id = tx_out.tx_id and tx_in.tx_out_index = tx_out.index
+                where stake_address.view = '${stakeAddress}'
+                AND tx_in.id is null;`;
             const res1 = await client.query(queryAda);
             let ada = 0;
             if (res1.rows[0].sum) {
@@ -171,7 +172,7 @@ async function fetchData(limit) {
             }
 
             // token count
-            const queryCoins = `SELECT encode(ma.policy::bytea, 'hex') as policy, ma.fingerprint, SUM(matxo.quantity) AS total_quantity
+            const queryCoins = `SELECT encode(ma.policy::bytea, 'hex') as policy, SUM(matxo.quantity) AS quantity
             FROM tx_out AS txo
             LEFT JOIN tx_in AS txi ON txo.tx_id = txi.tx_out_id AND txo.index::smallint = txi.tx_out_index::smallint 
             LEFT JOIN tx ON tx.id = txo.tx_id
@@ -184,9 +185,10 @@ async function fetchData(limit) {
             AND block.epoch_no IS NOT NULL 
             AND ma.policy IS NOT NULL 
             group by ma.fingerprint, ma.policy 
-            order by total_quantity desc;`;
-            const res2 = await client.query(queryCoins);
-            const tokenCount = res2.rows.length;
+            order by quantity desc;`;
+            const resultAssets = await client.query(queryCoins);
+            const tokenCount = resultAssets.rows.length;
+            const assets = resultAssets.rows;     
 
             // first delegation
             const queryDelegation = `SELECT delegation.active_epoch_no, pool_hash.view from delegation
@@ -217,10 +219,10 @@ async function fetchData(limit) {
 
             // first transaction
             const queryFirstTransaction = `SELECT * FROM tx_out 
-        LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
-        LEFT JOIN tx ON tx_out.tx_id = tx.id
-        LEFT JOIN block ON tx.block_id = block.id
-        WHERE stake_address.view='${stakeAddress}' ORDER BY time LIMIT 10;`;
+                LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
+                LEFT JOIN tx ON tx_out.tx_id = tx.id
+                LEFT JOIN block ON tx.block_id = block.id
+                WHERE stake_address.view='${stakeAddress}' ORDER BY time LIMIT 10;`;
 
             const res4 = await client.query(queryFirstTransaction);
             let firstTransaction = null;
@@ -234,10 +236,12 @@ async function fetchData(limit) {
 
             console.log(output);
 
-            const data = {
-                $set: output
-            };
-            const result = await collection.updateOne(query, data, {upsert: true});
+            const resultUpdatedAddresses = await collection.updateOne(query, {$set: output}, {upsert: true});
+
+            if (assets.length > 0) {
+                const collectionAssets = db.collection(collectionNamePolices);
+                const resultUpdatedAssets = await collectionAssets.updateOne(query, {$set: {"assets": assets}}, {upsert: true});
+            }
         }
     }
 
