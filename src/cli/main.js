@@ -156,7 +156,7 @@ async function fetchData(limit) {
         for (const row of items) {
             count++;
             const stakeAddress = row.stakeAddress;
-            console.log('progress: ' + itemsLeft + '/' + (itemsLeft - count) + ' ' + stakeAddress);
+            console.log('left: ' + (itemsLeft - count) + ' ' + stakeAddress);
 
             // ada balance
             const queryAda = `SELECT sum(tx_out.value)
@@ -234,7 +234,7 @@ async function fetchData(limit) {
             const query = {stakeAddress: stakeAddress};
             const output = calculateScores(ada, transactionCount, firstTransaction, tokenCount, firstDelegationEpoch, currentEpoch, poolInfo);
 
-            console.log(output);
+            //console.log(output);
 
             const resultUpdatedAddresses = await collection.updateOne(query, {$set: output}, {upsert: true});
 
