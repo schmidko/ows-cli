@@ -23,7 +23,8 @@ async function main() {
     await client.connect()
 
     //const stakeAddress = "stake1uxm97mqnylyssfsmqnvnx5mc0cnuk2t2h5cmd9uhlsj2n3cvz7qm2"; // my
-    const stakeAddress = "stake1u9zjr6e37w53a474puhx606ayr3rz2l6jljrmzvlzkk3cmg0m2zw0"; // biggest
+    //const stakeAddress = "stake1u9zjr6e37w53a474puhx606ayr3rz2l6jljrmzvlzkk3cmg0m2zw0"; // biggest
+    const stakeAddress = "stake1u8jygj9zv32x7zl5hxxl3kpgsyx8qnxx3sp88f8jn4mlcqcd9v5vm"; // last tx > 1 month
 
     // const lol = `SELECT * from delegation
     //         inner join stake_address on delegation.addr_id = stake_address.id
@@ -33,29 +34,23 @@ async function main() {
     //         order by active_epoch_no asc;`;
     // const res = await client.query(lol);
 
+    const lol5 = `SELECT 
+            MAX(block.time) AS last_tx_time,
+            CASE 
+                WHEN MAX(block.time) < NOW() - INTERVAL '1 month' THEN true 
+                ELSE false 
+            END AS is_older_than_one_month
+        FROM tx_out AS txo
+        JOIN tx ON tx.id = txo.tx_id
+        JOIN block ON tx.block_id = block.id
+        JOIN stake_address AS sa ON txo.stake_address_id = sa.id
+        WHERE sa.view = '${stakeAddress}';`;
 
-    const lol4 = `SELECT encode(ma.policy::bytea, 'hex') as policy, 
-    ma.fingerprint, 
-    jsonb_agg(tm.json),
-    SUM(matxo.quantity) AS total_quantity
-    FROM tx_out AS txo
-    LEFT JOIN tx_in AS txi ON txo.tx_id = txi.tx_out_id AND txo.index::smallint = txi.tx_out_index::smallint 
-    LEFT JOIN tx ON tx.id = txo.tx_id
-    LEFT JOIN block ON tx.block_id = block.id 
-    LEFT JOIN stake_address AS sa ON txo.stake_address_id = sa.id 
-    LEFT JOIN ma_tx_out AS matxo ON matxo.tx_out_id = txo.id 
-    LEFT JOIN multi_asset AS ma ON ma.id = matxo.ident 
-    LEFT JOIN tx_metadata AS tm ON tx.id = tm.tx_id
-    WHERE sa.view = '${stakeAddress}' 
-    AND txi.tx_in_id IS NULL 
-    AND block.epoch_no IS NOT NULL 
-    AND ma.policy IS NOT NULL 
-    group by ma.fingerprint, ma.policy 
-    order by total_quantity desc;`;
-    const res2 = await client.query(lol4);
 
-    console.log(res2.rows[1].jsonb_agg);
+    const res = await client.query(lol5);
+console.log('res2', res.rows);
 
+    //console.log(res2.rows[1].jsonb_agg);
 
     // const queryFirstTransaction = `SELECT * FROM tx_out 
     //     LEFT JOIN stake_address ON tx_out.stake_address_id = stake_address.id
@@ -160,8 +155,25 @@ async function fetchData(limit) {
         let count = 0;
         for (const row of items) {
             count++;
-            //const stakeAddress = row.stakeAddress;
-            const stakeAddress = "stake1u9zjr6e37w53a474puhx606ayr3rz2l6jljrmzvlzkk3cmg0m2zw0"; // biggest
+            const stakeAddress = row.stakeAddress;
+
+            const queryHowOld = `SELECT 
+            MAX(block.time) AS last_tx_time,
+                CASE 
+                    WHEN MAX(block.time) < NOW() - INTERVAL '1 month' THEN true 
+                    ELSE false 
+                END AS is_older_than_one_month
+            FROM tx_out AS txo
+            JOIN tx ON tx.id = txo.tx_id
+            JOIN block ON tx.block_id = block.id
+            JOIN stake_address AS sa ON txo.stake_address_id = sa.id
+            WHERE sa.view = '${stakeAddress}';`;
+
+            const resultHowOld = await client.query(queryHowOld);
+            if (resultHowOld.rows[0].is_older_than_one_month) {
+                console.log('left: ' + (itemsLeft - count) + ' ' + stakeAddress + ' - too old!');
+                continue;
+            }
 
             console.log('left: ' + (itemsLeft - count) + ' ' + stakeAddress);
 
