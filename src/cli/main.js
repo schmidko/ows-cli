@@ -22,7 +22,8 @@ async function main() {
     const client = new Client(config)
     await client.connect()
 
-    const stakeAddress = "stake1uxm97mqnylyssfsmqnvnx5mc0cnuk2t2h5cmd9uhlsj2n3cvz7qm2";
+    //const stakeAddress = "stake1uxm97mqnylyssfsmqnvnx5mc0cnuk2t2h5cmd9uhlsj2n3cvz7qm2"; // my
+    const stakeAddress = "stake1u9zjr6e37w53a474puhx606ayr3rz2l6jljrmzvlzkk3cmg0m2zw0"; // biggest
 
     // const lol = `SELECT * from delegation
     //         inner join stake_address on delegation.addr_id = stake_address.id
@@ -33,7 +34,10 @@ async function main() {
     // const res = await client.query(lol);
 
 
-    const lol4 = `SELECT encode(ma.policy::bytea, 'hex') as policy, ma.fingerprint, SUM(matxo.quantity) AS total_quantity
+    const lol4 = `SELECT encode(ma.policy::bytea, 'hex') as policy, 
+    ma.fingerprint, 
+    jsonb_agg(tm.json),
+    SUM(matxo.quantity) AS total_quantity
     FROM tx_out AS txo
     LEFT JOIN tx_in AS txi ON txo.tx_id = txi.tx_out_id AND txo.index::smallint = txi.tx_out_index::smallint 
     LEFT JOIN tx ON tx.id = txo.tx_id
@@ -41,6 +45,7 @@ async function main() {
     LEFT JOIN stake_address AS sa ON txo.stake_address_id = sa.id 
     LEFT JOIN ma_tx_out AS matxo ON matxo.tx_out_id = txo.id 
     LEFT JOIN multi_asset AS ma ON ma.id = matxo.ident 
+    LEFT JOIN tx_metadata AS tm ON tx.id = tm.tx_id
     WHERE sa.view = '${stakeAddress}' 
     AND txi.tx_in_id IS NULL 
     AND block.epoch_no IS NOT NULL 
@@ -49,7 +54,7 @@ async function main() {
     order by total_quantity desc;`;
     const res2 = await client.query(lol4);
 
-    console.log(res2);
+    console.log(res2.rows[1].jsonb_agg);
 
 
     // const queryFirstTransaction = `SELECT * FROM tx_out 
@@ -59,7 +64,7 @@ async function main() {
     //     WHERE stake_address.view='${stakeAddress}' ORDER BY time LIMIT 10;`;
 
     // const res = await client.query(queryFirstTransaction)
-    console.log(res.rows);
+    //console.log(res.rows);
 
     // for (const ele of res.rows) {
     //     console.log(ele);
@@ -97,7 +102,7 @@ async function fetchStakeAddresses(offset) {
 
     let resultPg = null;
     do {
-        const query = `SELECT * FROM stake_address ORDER BY id LIMIT 100 OFFSET ${offset};`;
+        const query = `SELECT view FROM stake_address ORDER BY id LIMIT 100 OFFSET ${offset};`;
         const res = await client.query(query);
         resultPg = res.rows
 
@@ -155,7 +160,9 @@ async function fetchData(limit) {
         let count = 0;
         for (const row of items) {
             count++;
-            const stakeAddress = row.stakeAddress;
+            //const stakeAddress = row.stakeAddress;
+            const stakeAddress = "stake1u9zjr6e37w53a474puhx606ayr3rz2l6jljrmzvlzkk3cmg0m2zw0"; // biggest
+
             console.log('left: ' + (itemsLeft - count) + ' ' + stakeAddress);
 
             // ada balance
@@ -188,7 +195,7 @@ async function fetchData(limit) {
             order by quantity desc;`;
             const resultAssets = await client.query(queryCoins);
             const tokenCount = resultAssets.rows.length;
-            const assets = resultAssets.rows;     
+            const assets = resultAssets.rows;
 
             // first delegation
             const queryDelegation = `SELECT delegation.active_epoch_no, pool_hash.view from delegation
