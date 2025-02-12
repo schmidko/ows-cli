@@ -147,8 +147,9 @@ async function fetchData(limit) {
             ]
     };
 
+    let itemsLeft = 0;
     do {
-        let itemsLeft = await collection.countDocuments(queryFind);
+        itemsLeft = await collection.countDocuments(queryFind);
         console.log('items left: ', itemsLeft);
         if (itemsLeft == 0) {
             return "Finished!!"
@@ -163,26 +164,27 @@ async function fetchData(limit) {
             itemsLeft--;
             const stakeAddress = row.stakeAddress;
 
-            const queryHowOld = `SELECT 
-            MAX(block.time) AS last_tx_time,
-                CASE 
-                    WHEN MAX(block.time) < NOW() - INTERVAL '1 month' THEN true 
-                    ELSE false 
-                END AS is_older_than_one_month
-            FROM tx_out AS txo
-            JOIN tx ON tx.id = txo.tx_id
-            JOIN block ON tx.block_id = block.id
-            JOIN stake_address AS sa ON txo.stake_address_id = sa.id
-            WHERE sa.view = '${stakeAddress}';`;
+            // const queryHowOld = `SELECT 
+            // MAX(block.time) AS last_tx_time,
+            //     CASE 
+            //         WHEN MAX(block.time) < NOW() - INTERVAL '1 month' THEN true 
+            //         ELSE false 
+            //     END AS is_older_than_one_month
+            // FROM tx_out AS txo
+            // JOIN tx ON tx.id = txo.tx_id
+            // JOIN block ON tx.block_id = block.id
+            // JOIN stake_address AS sa ON txo.stake_address_id = sa.id
+            // WHERE sa.view = '${stakeAddress}';`;
 
-            // skip if too old and data are fetched before
-            const resultHowOld = await client.query(queryHowOld);
-            if (resultHowOld.rows[0].is_older_than_one_month && row.ada) {
-                const query = {stakeAddress: stakeAddress};
-                await collection.updateOne(query, {$set: {date: new Date()}});
-                console.log('left: ' + (itemsLeft) + ' ' + stakeAddress + ' - too old!');
-                continue;
-            }
+            // // skip if too old and data are fetched before
+            // const resultHowOld = await client.query(queryHowOld);
+            
+            // if (resultHowOld.rows[0].is_older_than_one_month && row.ada) {
+            //     const query = {stakeAddress: stakeAddress};
+            //     await collection.updateOne(query, {$set: {date: new Date()}});
+            //     console.log('left: ' + (itemsLeft) + ' ' + stakeAddress + ' - too old!');
+            //     continue;
+            // }
 
             console.log('left: ' + (itemsLeft) + ' ' + stakeAddress);
 
