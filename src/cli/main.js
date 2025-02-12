@@ -159,9 +159,8 @@ async function fetchData(limit) {
         const res11 = await client.query(currentEpochQuery);
         const currentEpoch = res11.rows[0].epoch_no;
 
-        let count = 0;
         for (const row of items) {
-            count++;
+            itemsLeft--;
             const stakeAddress = row.stakeAddress;
 
             const queryHowOld = `SELECT 
@@ -181,11 +180,11 @@ async function fetchData(limit) {
             if (resultHowOld.rows[0].is_older_than_one_month && row.ada) {
                 const query = {stakeAddress: stakeAddress};
                 await collection.updateOne(query, {$set: {date: new Date()}});
-                console.log('left: ' + (itemsLeft - count) + ' ' + stakeAddress + ' - too old!');
+                console.log('left: ' + (itemsLeft) + ' ' + stakeAddress + ' - too old!');
                 continue;
             }
 
-            console.log('left: ' + (itemsLeft - count) + ' ' + stakeAddress);
+            console.log('left: ' + (itemsLeft) + ' ' + stakeAddress);
 
             // ada balance
             const queryAda = `SELECT sum(tx_out.value)
