@@ -147,8 +147,7 @@ async function fetchData(limit) {
             ]
     };
 
-    for (let i = 0; i < 10000; i++) { // 10000 * 1000 = 1M querys
-
+    do {
         const itemsLeft = await collection.countDocuments(queryFind);
         console.log('items left: ', itemsLeft);
         if (itemsLeft == 0) {
@@ -177,8 +176,11 @@ async function fetchData(limit) {
             JOIN stake_address AS sa ON txo.stake_address_id = sa.id
             WHERE sa.view = '${stakeAddress}';`;
 
+            // skip if too old and data are fetched before
             const resultHowOld = await client.query(queryHowOld);
-            if (resultHowOld.rows[0].is_older_than_one_month) {
+            if (resultHowOld.rows[0].is_older_than_one_month && row.ada) {
+                const query = {stakeAddress: stakeAddress};
+                await collection.updateOne(query, {$set: {date: new Date()}});
                 console.log('left: ' + (itemsLeft - count) + ' ' + stakeAddress + ' - too old!');
                 continue;
             }
@@ -275,7 +277,7 @@ async function fetchData(limit) {
                 const resultUpdatedAssets = await collectionAssets.updateOne(query, {$set: {"assets": assets}}, {upsert: true});
             }
         }
-    }
+    } while (itemsLeft > 0);
 
     await client.end();
     return "Data fetching done!!";
