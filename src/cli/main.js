@@ -143,7 +143,7 @@ async function fetchData(limit) {
         $or:
             [
                 {"date": {$exists: false}},
-                {"date": {$lt: new Date("2025-02-01T00:00:00Z")}},
+                {"date": {$lt: new Date("2025-02-12T00:00:00Z")}},
             ]
     };
 
