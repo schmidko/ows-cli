@@ -148,7 +148,7 @@ async function fetchData(limit) {
     };
 
     do {
-        const itemsLeft = await collection.countDocuments(queryFind);
+        let itemsLeft = await collection.countDocuments(queryFind);
         console.log('items left: ', itemsLeft);
         if (itemsLeft == 0) {
             return "Finished!!"
