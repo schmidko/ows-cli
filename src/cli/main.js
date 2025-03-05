@@ -159,6 +159,7 @@ async function fetchData(limit) {
         const currentEpochQuery = "SELECT epoch_no from block where block_no is not null order by block_no desc limit 1;";
         const res11 = await client.query(currentEpochQuery);
         const currentEpoch = res11.rows[0].epoch_no;
+        let notUpdated = [];
 
         for (const row of items) {
             itemsLeft--;
@@ -180,8 +181,7 @@ async function fetchData(limit) {
             const resultHowOld = await client.query(queryHowOld);
             
             if (resultHowOld.rows[0].is_older_than_one_month && "balanceAda" in row) {
-                const query = {stakeAddress: stakeAddress};
-                await collection.updateOne(query, {$set: {date: new Date()}});
+                notUpdated.push(stakeAddress);
                 console.log('left: ' + (itemsLeft) + ' ' + stakeAddress + ' - too old!');
                 continue;
             }
@@ -278,6 +278,12 @@ async function fetchData(limit) {
                 const resultUpdatedAssets = await collectionAssets.updateOne(query, {$set: {"assets": assets}}, {upsert: true});
             }
         }
+
+        // update date
+        const query = { stakeAddress: { $in: notUpdated } };
+        const update = { $set: { date: new Date() } };
+        const result = await collection.updateMany(query, update);
+        console.log(`${result.modifiedCount} documents updated.`);
     } while (itemsLeft > 0);
 
     await client.end();
