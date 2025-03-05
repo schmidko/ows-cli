@@ -34,25 +34,15 @@ async function main() {
     //         order by active_epoch_no asc;`;
     // const res = await client.query(lol);
 
-    const lol5 = `SELECT 
-            encode(ma.policy::bytea, 'hex') AS policyId, 
-            SUM(matxo.quantity) AS quantity,
-            ARRAY_AGG(DISTINCT ma.fingerprint) AS fingerprints
-        FROM tx_out AS txo
-        LEFT JOIN tx_in AS txi 
-            ON txo.tx_id = txi.tx_out_id 
-            AND txo.index::smallint = txi.tx_out_index::smallint 
-        LEFT JOIN tx ON tx.id = txo.tx_id
-        LEFT JOIN block ON tx.block_id = block.id 
-        LEFT JOIN stake_address AS sa ON txo.stake_address_id = sa.id 
-        LEFT JOIN ma_tx_out AS matxo ON matxo.tx_out_id = txo.id 
-        LEFT JOIN multi_asset AS ma ON ma.id = matxo.ident 
-        WHERE sa.view = '${stakeAddress}' 
-        AND txi.tx_in_id IS NULL 
-        AND block.epoch_no IS NOT NULL 
-        AND ma.policy IS NOT NULL 
-        GROUP BY ma.policy
-        ORDER BY policy_id;`;
+    const lol5 = `SELECT EXISTS (
+            SELECT 1
+            FROM tx_out AS txo
+            JOIN tx ON tx.id = txo.tx_id
+            JOIN block ON tx.block_id = block.id
+            JOIN stake_address AS sa ON txo.stake_address_id = sa.id
+            WHERE sa.view = '${stakeAddress}'
+            AND block.time >= NOW() - INTERVAL '1 month'
+        ) AS has_recent_transactions;`;
 
 
     const res = await client.query(lol5);
@@ -165,28 +155,26 @@ async function fetchData(limit) {
             itemsLeft--;
             const stakeAddress = row.stakeAddress;
 
-            const queryHowOld = `SELECT 
-            MAX(block.time) AS last_tx_time,
-                CASE 
-                    WHEN MAX(block.time) < NOW() - INTERVAL '1 month' THEN true 
-                    ELSE false 
-                END AS is_older_than_one_month
-            FROM tx_out AS txo
-            JOIN tx ON tx.id = txo.tx_id
-            JOIN block ON tx.block_id = block.id
-            JOIN stake_address AS sa ON txo.stake_address_id = sa.id
-            WHERE sa.view = '${stakeAddress}';`;
+            const queryHowOld = `SELECT EXISTS (
+                SELECT 1
+                FROM tx_out AS txo
+                JOIN tx ON tx.id = txo.tx_id
+                JOIN block ON tx.block_id = block.id
+                JOIN stake_address AS sa ON txo.stake_address_id = sa.id
+                WHERE sa.view = '${stakeAddress}'
+                AND block.time >= NOW() - INTERVAL '1 month'
+            ) AS has_recent_transactions;`;
 
             // skip if too old and data are fetched before
             const resultHowOld = await client.query(queryHowOld);
             
-            if (resultHowOld.rows[0].is_older_than_one_month && "balanceAda" in row) {
+            if (!resultHowOld.rows[0].has_recent_transactions && "balanceAda" in row) {
                 notUpdated.push(stakeAddress);
                 console.log('left: ' + (itemsLeft) + ' ' + stakeAddress + ' - too old!');
                 continue;
             }
 
-            console.log('left: ' + (itemsLeft) + ' ' + stakeAddress, resultHowOld.rows[0].is_older_than_one_month, "balanceAda" in row);
+            console.log('left: ' + (itemsLeft) + ' ' + stakeAddress, resultHowOld.rows[0].has_recent_transactions, "balanceAda" in row);
 
             // ada balance
             const queryAda = `SELECT sum(tx_out.value)
