@@ -186,7 +186,7 @@ async function fetchData(limit) {
                 continue;
             }
 
-            console.log('left: ' + (itemsLeft) + ' ' + stakeAddress);
+            console.log('left: ' + (itemsLeft) + ' ' + stakeAddress, resultHowOld.rows[0].is_older_than_one_month, "balanceAda" in row);
 
             // ada balance
             const queryAda = `SELECT sum(tx_out.value)
