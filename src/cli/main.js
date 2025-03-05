@@ -179,7 +179,7 @@ async function fetchData(limit) {
             // skip if too old and data are fetched before
             const resultHowOld = await client.query(queryHowOld);
             
-            if (resultHowOld.rows[0].is_older_than_one_month && "ada" in row) {
+            if (resultHowOld.rows[0].is_older_than_one_month && "balanceAda" in row) {
                 const query = {stakeAddress: stakeAddress};
                 await collection.updateOne(query, {$set: {date: new Date()}});
                 console.log('left: ' + (itemsLeft) + ' ' + stakeAddress + ' - too old!');
