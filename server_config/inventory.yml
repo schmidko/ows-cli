@@ -1,5 +1,5 @@
 [moo]
-ows-cli ansible_host=main04
+ows-cli ansible_host=main05
 
 [moo:vars]
 ansible_python_interpreter=/usr/bin/python3

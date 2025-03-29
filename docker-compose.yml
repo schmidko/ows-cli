@@ -9,20 +9,10 @@ services:
     ports:
       - 27055:27017
     volumes:
-      - /home/mog/mongo_data:/data/db
+      - /mnt/disk2/mongo_data:/data/db
     networks:
       - ows
 
-  # postgres:
-  #   image: postgres:14-alpine
-  #   ports:
-  #     - 5432:5432
-  #   volumes:
-  #     - ~/home/mog/pg_data:/data/db
-  #   environment:
-  #     - POSTGRES_PASSWORD=knut
-  #     - POSTGRES_USER=root
-  #     - POSTGRES_DB=ows
 
 networks:
   ows:
